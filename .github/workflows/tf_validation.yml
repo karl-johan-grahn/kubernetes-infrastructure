@@ -1,0 +1,27 @@
+name: terraform-validation
+
+on:
+  pull_request:
+    paths:
+      - 'remote_state/**'
+      - 'terraform/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate terraform
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Fetch history
+        run: git fetch --prune --unshallow
+      - name: Lint terraform
+        uses: actionshub/terraform-lint-with-diff@master
+      - name: Validate remote state terraform
+        uses: dflook/terraform-validate@v1
+        with:
+          path: remote_state
+      - name: Validate Kubernetes terraform
+        uses: dflook/terraform-validate@v1
+        with:
+          path: terraform
