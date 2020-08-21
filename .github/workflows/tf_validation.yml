@@ -16,7 +16,7 @@ jobs:
       - name: Fetch history
         run: git fetch --prune --unshallow
       - name: Lint terraform
-        uses: actionshub/terraform-lint-with-diff@master
+        uses: actionshub/terraform-lint@master
       - name: Validate remote state terraform
         uses: dflook/terraform-validate@v1
         with:
