@@ -17,9 +17,9 @@ resource "aws_s3_bucket" "terraform-state-storage-s3" {
 
 # Create a DynamoDB table for locking the state file
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
-  name = "terraform-state-lock-dynamo"
-  hash_key = "LockID"
-  read_capacity = 1
+  name           = "terraform-state-lock-dynamo"
+  hash_key       = "LockID"
+  read_capacity  = 1
   write_capacity = 1
 
   attribute {
