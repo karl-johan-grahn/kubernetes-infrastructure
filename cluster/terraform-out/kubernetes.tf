@@ -80,6 +80,11 @@ provider "aws" {
   region = "eu-west-1"
 }
 
+resource "aws_autoscaling_attachment" "master-eu-west-1a-masters-mytempsite-tk" {
+  autoscaling_group_name = aws_autoscaling_group.master-eu-west-1a-masters-mytempsite-tk.id
+  elb                    = aws_elb.api-mytempsite-tk.id
+}
+
 resource "aws_autoscaling_group" "master-eu-west-1a-masters-mytempsite-tk" {
   enabled_metrics      = ["GroupDesiredCapacity", "GroupInServiceInstances", "GroupMaxSize", "GroupMinSize", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
   launch_configuration = aws_launch_configuration.master-eu-west-1a-masters-mytempsite-tk.id
@@ -188,6 +193,33 @@ resource "aws_ebs_volume" "a-etcd-main-mytempsite-tk" {
   type = "gp2"
 }
 
+resource "aws_elb" "api-mytempsite-tk" {
+  cross_zone_load_balancing = false
+  health_check {
+    healthy_threshold   = 2
+    interval            = 10
+    target              = "SSL:443"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
+  idle_timeout = 300
+  listener {
+    instance_port      = 443
+    instance_protocol  = "TCP"
+    lb_port            = 443
+    lb_protocol        = "TCP"
+    ssl_certificate_id = ""
+  }
+  name            = "api-mytempsite-tk-d3ul6b"
+  security_groups = [aws_security_group.api-elb-mytempsite-tk.id]
+  subnets         = [aws_subnet.eu-west-1a-mytempsite-tk.id]
+  tags = {
+    "KubernetesCluster"                   = "mytempsite.tk"
+    "Name"                                = "api.mytempsite.tk"
+    "kubernetes.io/cluster/mytempsite.tk" = "owned"
+  }
+}
+
 resource "aws_iam_instance_profile" "masters-mytempsite-tk" {
   name = "masters.mytempsite.tk"
   role = aws_iam_role.masters-mytempsite-tk.name
@@ -274,6 +306,17 @@ resource "aws_launch_configuration" "nodes-mytempsite-tk" {
   user_data       = file("${path.module}/data/aws_launch_configuration_nodes.mytempsite.tk_user_data")
 }
 
+resource "aws_route53_record" "api-mytempsite-tk" {
+  alias {
+    evaluate_target_health = false
+    name                   = aws_elb.api-mytempsite-tk.dns_name
+    zone_id                = aws_elb.api-mytempsite-tk.zone_id
+  }
+  name    = "api.mytempsite.tk"
+  type    = "A"
+  zone_id = "/hostedzone/Z06148838B9CC2ZY453E"
+}
+
 resource "aws_route_table_association" "eu-west-1a-mytempsite-tk" {
   route_table_id = aws_route_table.mytempsite-tk.id
   subnet_id      = aws_subnet.eu-west-1a-mytempsite-tk.id
@@ -322,12 +365,39 @@ resource "aws_security_group_rule" "all-node-to-node" {
   type                     = "ingress"
 }
 
-resource "aws_security_group_rule" "https-external-to-master-0-0-0-0--0" {
+resource "aws_security_group_rule" "api-elb-egress" {
+  cidr_blocks       = ["0.0.0.0/0"]
+  from_port         = 0
+  protocol          = "-1"
+  security_group_id = aws_security_group.api-elb-mytempsite-tk.id
+  to_port           = 0
+  type              = "egress"
+}
+
+resource "aws_security_group_rule" "https-api-elb-0-0-0-0--0" {
   cidr_blocks       = ["0.0.0.0/0"]
   from_port         = 443
   protocol          = "tcp"
-  security_group_id = aws_security_group.masters-mytempsite-tk.id
+  security_group_id = aws_security_group.api-elb-mytempsite-tk.id
   to_port           = 443
+  type              = "ingress"
+}
+
+resource "aws_security_group_rule" "https-elb-to-master" {
+  from_port                = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.masters-mytempsite-tk.id
+  source_security_group_id = aws_security_group.api-elb-mytempsite-tk.id
+  to_port                  = 443
+  type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "icmp-pmtu-api-elb-0-0-0-0--0" {
+  cidr_blocks       = ["0.0.0.0/0"]
+  from_port         = 3
+  protocol          = "icmp"
+  security_group_id = aws_security_group.api-elb-mytempsite-tk.id
+  to_port           = 4
   type              = "ingress"
 }
 
@@ -401,6 +471,17 @@ resource "aws_security_group_rule" "ssh-external-to-node-0-0-0-0--0" {
   security_group_id = aws_security_group.nodes-mytempsite-tk.id
   to_port           = 22
   type              = "ingress"
+}
+
+resource "aws_security_group" "api-elb-mytempsite-tk" {
+  description = "Security group for api ELB"
+  name        = "api-elb.mytempsite.tk"
+  tags = {
+    "KubernetesCluster"                   = "mytempsite.tk"
+    "Name"                                = "api-elb.mytempsite.tk"
+    "kubernetes.io/cluster/mytempsite.tk" = "owned"
+  }
+  vpc_id = aws_vpc.mytempsite-tk.id
 }
 
 resource "aws_security_group" "masters-mytempsite-tk" {

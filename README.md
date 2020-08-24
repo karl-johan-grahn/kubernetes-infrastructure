@@ -90,6 +90,7 @@ kops create cluster \
     --cloud=aws \
     --name="mytempsite.tk" \
     --dns-zone="mytempsite.tk" \
+    --api-loadbalancer-type=public \
     --state=s3://kops-state-kjg \
     --kubernetes-version="1.18.0" \
     --master-zones="eu-west-1a" \
@@ -133,16 +134,16 @@ Create `Tiller` service account and cluster role binding:
 $ kubectl create -f tiller-rbac-config.yaml
 ```
 
-Verify `Tiller` account, role, and binding:
-```
-kubectl --namespace kube-system get deploy tiller-deploy -o yaml
-```
-
 Install `Tiller` into the cluster:
 ```
 $ helm init --service-account tiller
 $ kubectl get pod -n kube-system | grep tiller
 tiller-deploy-55f5dfddc9-zqx88                                        1/1     Running   0          13s
+```
+
+Verify `Tiller` account, role, and binding:
+```
+kubectl --namespace kube-system get deploy tiller-deploy -o yaml
 ```
 
 Store the generated Terraform files `terraform-out` in Git.
@@ -151,6 +152,15 @@ Store the Kube config as a `KUBECONFIG` secret in the [Helm registry repository]
 ![KUBECONFIG secret](kubeconfig_gh_secret.png)
 
 The cluster is now ready for deploying Helm charts via the [Helm registry repository](https://github.com/karl-johan-grahn/helm-registry).
+
+### Destroy
+Tear down the cluster as follows:
+```
+$ terraform destroy
+$ kops delete cluster --yes \
+  --name=mytempsite.tk \
+  --state=s3://kops-state-kjg
+```
 
 ## Future work
 For production purposes, evaluate these options:
