@@ -24,4 +24,4 @@ jobs:
       - name: Validate Kubernetes terraform
         uses: dflook/terraform-validate@v1
         with:
-          path: terraform
+          path: cluster
