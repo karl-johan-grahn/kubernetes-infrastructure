@@ -12,7 +12,7 @@ jobs:
     name: Validate terraform
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Fetch history
         run: git fetch --prune --unshallow
       - name: Lint terraform
