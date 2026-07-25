@@ -18,10 +18,10 @@ jobs:
       - name: Lint terraform
         uses: actionshub/terraform-lint@master
       - name: Validate remote state terraform
-        uses: dflook/terraform-validate@v1
+        uses: dflook/terraform-validate@v3
         with:
           path: remote_state
       - name: Validate Kubernetes terraform
-        uses: dflook/terraform-validate@v1
+        uses: dflook/terraform-validate@v3
         with:
           path: cluster
